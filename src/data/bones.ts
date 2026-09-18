@@ -84,8 +84,8 @@ const EASY_TRUNK_AND_LIMBS: BoneEntry[] = [
   paired('patella', 'Patella (kneecap)', 'easy'),
   paired('tibia', 'Tibia (shin bone)', 'easy'),
   paired('fibula', 'Fibula', 'easy'),
-  paired('calcaneus', 'Calcaneus (heel bone)', 'easy'),
-  paired('talus', 'Talus', 'easy'),
+  paired('calcaneus', 'Calcaneus (heel bone)', 'easy', { group: 'foot' }),
+  paired('talus', 'Talus', 'easy', { group: 'foot' }),
 ];
 
 const EASY_SPINE_LANDMARKS: BoneEntry[] = [
@@ -139,6 +139,8 @@ const EASY_SPINE_GENERIC: BoneEntry[] = [
   vertebraEntry('l', 1, 'lumbar', 'easy'),
   vertebraEntry('l', 5, 'lumbar', 'easy'),
 ];
+// `vertebraEntry` already sets group: 'vertebra' on every entry it builds,
+// so t1/t12/l1/l5 above are covered even though this pool is 'easy'.
 
 const HARD_VERTEBRAE: BoneEntry[] = [
   ...[3, 4, 5, 6].map((n) => vertebraEntry('c', n, 'cervical', 'hard')),
@@ -163,7 +165,7 @@ const CARPALS: ReadonlyArray<[string, string, string]> = [
 ];
 
 const HARD_CARPALS: BoneEntry[] = CARPALS.map(([id, displayName, hint]) =>
-  paired(id, displayName, 'hard', { hint }),
+  paired(id, displayName, 'hard', { hint, group: 'hand' }),
 );
 
 const TARSALS: ReadonlyArray<[string, string, string]> = [
@@ -175,17 +177,17 @@ const TARSALS: ReadonlyArray<[string, string, string]> = [
 ];
 
 const HARD_TARSALS: BoneEntry[] = TARSALS.map(([id, displayName, hint]) =>
-  paired(id, displayName, 'hard', { hint }),
+  paired(id, displayName, 'hard', { hint, group: 'foot' }),
 );
 
 const HARD_METACARPALS: BoneEntry[] = Array.from({ length: 5 }, (_, i) => {
   const n = i + 1;
-  return paired(`metacarpal_${n}`, `${ordinal(n)} metacarpal`, 'hard');
+  return paired(`metacarpal_${n}`, `${ordinal(n)} metacarpal`, 'hard', { group: 'hand' });
 });
 
 const HARD_METATARSALS: BoneEntry[] = Array.from({ length: 5 }, (_, i) => {
   const n = i + 1;
-  return paired(`metatarsal_${n}`, `${ordinal(n)} metatarsal`, 'hard');
+  return paired(`metatarsal_${n}`, `${ordinal(n)} metatarsal`, 'hard', { group: 'foot' });
 });
 
 const HAND_DIGIT_NAMES = ['thumb', 'index finger', 'middle finger', 'ring finger', 'little finger'];
@@ -199,7 +201,7 @@ function phalanges(region: 'hand' | 'foot', digitNames: readonly string[]): Bone
     const segments = digit === 1 ? (['proximal', 'distal'] as const) : (['proximal', 'middle', 'distal'] as const);
     for (const segment of segments) {
       const id = `${region}_digit${digit}_${segment}_phalanx`;
-      entries.push(paired(id, `${capitalize(segment)} phalanx of the ${name}`, 'hard'));
+      entries.push(paired(id, `${capitalize(segment)} phalanx of the ${name}`, 'hard', { group: region }));
     }
   });
   return entries;

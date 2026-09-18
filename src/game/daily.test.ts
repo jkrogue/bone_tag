@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoneEntry } from '../data/types';
+import { BONES } from '../data/bones';
 import {
   EPOCH_DATE_KEY,
   dayNumber,
@@ -12,14 +13,18 @@ import {
   todayKey,
 } from './daily';
 
-function easy(id: string): BoneEntry {
-  return { id, displayName: id, difficulty: 'easy', meshNames: ['x'] };
+function easy(id: string, group?: BoneEntry['group']): BoneEntry {
+  return { id, displayName: id, difficulty: 'easy', meshNames: ['x'], group };
 }
 
 function hard(id: string, group?: BoneEntry['group']): BoneEntry {
   return { id, displayName: id, difficulty: 'hard', meshNames: ['x'], group };
 }
 
+// Includes a rib group (to prove ribs are always excluded), a vertebra
+// group (to prove the 1-per-session cap), an 'other' group, and exactly one
+// hard hand entry + one hard foot entry (required: every catalog must have
+// at least one hard hand/foot bone for the picker's hand/foot requirement).
 const FIXTURE_CATALOG: BoneEntry[] = [
   easy('femur'),
   easy('humerus'),
@@ -37,6 +42,8 @@ const FIXTURE_CATALOG: BoneEntry[] = [
   hard('t2', 'vertebra'),
   hard('t3', 'vertebra'),
   hard('l1', 'vertebra'),
+  hard('scaphoid', 'hand'),
+  hard('navicular', 'foot'),
   hard('hamate', 'other'),
   hard('trapezium', 'other'),
   hard('lunate', 'other'),
@@ -44,17 +51,18 @@ const FIXTURE_CATALOG: BoneEntry[] = [
   hard('coccyx', 'other'),
 ];
 
-// Single-group fixture: every hard entry shares the same group, so the
-// "both hard picks from one group" fallback path is exercised.
+// Single-group fixture: every hard entry shares the same group ('hand'), so
+// the "both hard picks from one group" fallback path is exercised while
+// still satisfying the hand/foot requirement for the first hard pick.
 const ONE_GROUP_CATALOG: BoneEntry[] = [
   easy('femur'),
   easy('humerus'),
   easy('skull'),
 
-  hard('a1', 'rib'),
-  hard('a2', 'rib'),
-  hard('a3', 'rib'),
-  hard('a4', 'rib'),
+  hard('a1', 'hand'),
+  hard('a2', 'hand'),
+  hard('a3', 'hand'),
+  hard('a4', 'hand'),
 ];
 
 function dateKeysFrom(startDateKey: string, count: number): string[] {
@@ -188,9 +196,9 @@ describe('pickDailyBones', () => {
     const puzzle = pickDailyBones('2026-09-18', ONE_GROUP_CATALOG);
     const [hard1, hard2] = puzzle.boneIds.slice(3, 5);
     expect(hard1).not.toBe(hard2);
-    const ribIds = new Set(ONE_GROUP_CATALOG.filter((b) => b.difficulty === 'hard').map((b) => b.id));
-    expect(ribIds.has(hard1)).toBe(true);
-    expect(ribIds.has(hard2)).toBe(true);
+    const hardIds = new Set(ONE_GROUP_CATALOG.filter((b) => b.difficulty === 'hard').map((b) => b.id));
+    expect(hardIds.has(hard1)).toBe(true);
+    expect(hardIds.has(hard2)).toBe(true);
   });
 
   it('is independent of catalog insertion order', () => {
@@ -199,16 +207,98 @@ describe('pickDailyBones', () => {
     expect(reversed).toEqual(forward);
   });
 
-  it('covers every catalog id at least once over 730 consecutive days', () => {
+  it('covers every non-rib catalog id at least once over 730 consecutive days', () => {
+    // Ribs are never picked (rule 1), so they're excluded from the expected
+    // coverage set. 730 days is still enough for this fixture's non-rib ids.
     const keys = dateKeysFrom(EPOCH_DATE_KEY, 730);
     const seen = new Set<string>();
     for (const key of keys) {
       const puzzle = pickDailyBones(key, FIXTURE_CATALOG);
       puzzle.boneIds.forEach((id) => seen.add(id));
     }
-    const allIds = FIXTURE_CATALOG.map((b) => b.id);
-    for (const id of allIds) {
+    const nonRibIds = FIXTURE_CATALOG.filter((b) => b.group !== 'rib').map((b) => b.id);
+    for (const id of nonRibIds) {
       expect(seen.has(id)).toBe(true);
+    }
+  });
+
+  it('never picks a rib over 730 consecutive days', () => {
+    const keys = dateKeysFrom(EPOCH_DATE_KEY, 730);
+    const ribIds = new Set(FIXTURE_CATALOG.filter((b) => b.group === 'rib').map((b) => b.id));
+    for (const key of keys) {
+      const puzzle = pickDailyBones(key, FIXTURE_CATALOG);
+      for (const id of puzzle.boneIds) {
+        expect(ribIds.has(id)).toBe(false);
+      }
+    }
+  });
+
+  it('never picks more than 1 vertebra per session over 730 consecutive days', () => {
+    const keys = dateKeysFrom(EPOCH_DATE_KEY, 730);
+    const vertebraIds = new Set(
+      FIXTURE_CATALOG.filter((b) => b.group === 'vertebra').map((b) => b.id),
+    );
+    for (const key of keys) {
+      const puzzle = pickDailyBones(key, FIXTURE_CATALOG);
+      const vertebraCount = puzzle.boneIds.filter((id) => vertebraIds.has(id)).length;
+      expect(vertebraCount).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('always includes at least 1 hand/foot bone among the 2 hard picks over 730 consecutive days', () => {
+    const keys = dateKeysFrom(EPOCH_DATE_KEY, 730);
+    for (const key of keys) {
+      const puzzle = pickDailyBones(key, FIXTURE_CATALOG);
+      const [hard1, hard2] = puzzle.boneIds.slice(3, 5);
+      const group1 = FIXTURE_CATALOG.find((b) => b.id === hard1)?.group;
+      const group2 = FIXTURE_CATALOG.find((b) => b.id === hard2)?.group;
+      expect(group1 === 'hand' || group1 === 'foot' || group2 === 'hand' || group2 === 'foot').toBe(
+        true,
+      );
+    }
+  });
+
+  it('vertebra cap holds against the real catalog over 730 consecutive days', () => {
+    const keys = dateKeysFrom(EPOCH_DATE_KEY, 730);
+    const vertebraIds = new Set(BONES.filter((b) => b.group === 'vertebra').map((b) => b.id));
+    const ribIds = new Set(BONES.filter((b) => b.group === 'rib').map((b) => b.id));
+    for (const key of keys) {
+      const puzzle = pickDailyBones(key, BONES);
+      const vertebraCount = puzzle.boneIds.filter((id) => vertebraIds.has(id)).length;
+      expect(vertebraCount).toBeLessThanOrEqual(1);
+      for (const id of puzzle.boneIds) {
+        expect(ribIds.has(id)).toBe(false);
+      }
+      const [hard1, hard2] = puzzle.boneIds.slice(3, 5);
+      const group1 = BONES.find((b) => b.id === hard1)?.group;
+      const group2 = BONES.find((b) => b.id === hard2)?.group;
+      expect(group1 === 'hand' || group1 === 'foot' || group2 === 'hand' || group2 === 'foot').toBe(
+        true,
+      );
+    }
+  });
+
+  it('caps vertebrae at 1 per session even when the easy pool is mostly vertebrae', () => {
+    const vertebraHeavyCatalog: BoneEntry[] = [
+      easy('v1', 'vertebra'),
+      easy('v2', 'vertebra'),
+      easy('v3', 'vertebra'),
+      easy('v4', 'vertebra'),
+      easy('nonvertebra_easy_1'),
+      easy('nonvertebra_easy_2'),
+      easy('nonvertebra_easy_3'),
+
+      hard('handbone', 'hand'),
+      hard('footbone', 'foot'),
+      hard('otherbone', 'other'),
+    ];
+    for (let seed = 1; seed <= 200; seed++) {
+      const selection = pickPracticeBones(vertebraHeavyCatalog, mulberry32(seed));
+      const vertebraCount = selection.boneIds.filter((id) => {
+        const entry = vertebraHeavyCatalog.find((b) => b.id === id);
+        return entry?.group === 'vertebra';
+      }).length;
+      expect(vertebraCount).toBeLessThanOrEqual(1);
     }
   });
 
@@ -252,9 +342,9 @@ describe('pickPracticeBones', () => {
     const selection = pickPracticeBones(ONE_GROUP_CATALOG, mulberry32(7));
     const [hard1, hard2] = selection.boneIds.slice(3, 5);
     expect(hard1).not.toBe(hard2);
-    const ribIds = new Set(ONE_GROUP_CATALOG.filter((b) => b.difficulty === 'hard').map((b) => b.id));
-    expect(ribIds.has(hard1)).toBe(true);
-    expect(ribIds.has(hard2)).toBe(true);
+    const hardIds = new Set(ONE_GROUP_CATALOG.filter((b) => b.difficulty === 'hard').map((b) => b.id));
+    expect(hardIds.has(hard1)).toBe(true);
+    expect(hardIds.has(hard2)).toBe(true);
   });
 
   it('is deterministic for a given rng sequence', () => {

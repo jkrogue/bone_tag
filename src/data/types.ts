@@ -1,5 +1,5 @@
 export type Difficulty = 'easy' | 'hard';
-export type BoneGroup = 'rib' | 'vertebra' | 'other';
+export type BoneGroup = 'rib' | 'vertebra' | 'hand' | 'foot' | 'other';
 
 /** One playable target. Paired bones (left/right) share a single entry whose meshNames list both sides. */
 export interface BoneEntry {
@@ -9,7 +9,11 @@ export interface BoneEntry {
   difficulty: Difficulty;
   /** Mesh names in public/skeleton.glb (keys of bones.generated.json "meshes"). */
   meshNames: string[];
-  /** Hard-pool grouping used by daily selection so ribs/vertebrae don't dominate. Defaults to 'other'. */
+  /**
+   * Hard-pool grouping used by daily selection: ribs are always excluded,
+   * vertebrae are capped at 1 per session, and every session's 2 hard picks
+   * must include at least one 'hand' or 'foot' bone. Defaults to 'other'.
+   */
   group?: BoneGroup;
   hint?: string;
 }

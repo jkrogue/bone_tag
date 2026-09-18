@@ -108,6 +108,52 @@ describe('BONES', () => {
     expect(ribs.every((bone) => bone.difficulty === 'hard')).toBe(true);
   });
 
+  it('gives every id ending in "_vertebra" group "vertebra"', () => {
+    const mislabeled = BONES.filter(
+      (bone) => bone.id.endsWith('_vertebra') && bone.group !== 'vertebra',
+    ).map((bone) => bone.id);
+    expect(mislabeled).toEqual([]);
+  });
+
+  it('gives every carpal, metacarpal, and hand phalanx group "hand"', () => {
+    const CARPAL_IDS = new Set([
+      'scaphoid',
+      'lunate',
+      'triquetral',
+      'pisiform',
+      'trapezium',
+      'trapezoid',
+      'capitate',
+      'hamate',
+    ]);
+    const isHandId = (id: string) =>
+      CARPAL_IDS.has(id) || /^metacarpal_[1-5]$/.test(id) || /^hand_digit\d+_(proximal|middle|distal)_phalanx$/.test(id);
+    const handEntries = BONES.filter((bone) => isHandId(bone.id));
+    expect(handEntries.length).toBeGreaterThan(0);
+    const mislabeled = handEntries.filter((bone) => bone.group !== 'hand').map((bone) => bone.id);
+    expect(mislabeled).toEqual([]);
+  });
+
+  it('gives every tarsal, metatarsal, foot phalanx, calcaneus, and talus group "foot"', () => {
+    const TARSAL_IDS = new Set([
+      'navicular',
+      'cuboid',
+      'medial_cuneiform',
+      'intermediate_cuneiform',
+      'lateral_cuneiform',
+    ]);
+    const isFootId = (id: string) =>
+      TARSAL_IDS.has(id) ||
+      id === 'calcaneus' ||
+      id === 'talus' ||
+      /^metatarsal_[1-5]$/.test(id) ||
+      /^foot_digit\d+_(proximal|middle|distal)_phalanx$/.test(id);
+    const footEntries = BONES.filter((bone) => isFootId(bone.id));
+    expect(footEntries.length).toBeGreaterThan(0);
+    const mislabeled = footEntries.filter((bone) => bone.group !== 'foot').map((bone) => bone.id);
+    expect(mislabeled).toEqual([]);
+  });
+
   it('leaves exactly the 4 sesamoids unreferenced by any entry', () => {
     const referenced = new Set(BONES.flatMap((bone) => bone.meshNames));
     const unreferenced = MESH_SLUGS.filter((slug) => !referenced.has(slug));
