@@ -1,0 +1,76 @@
+/* Styles for the hold-to-place overlays (HoldRing, MissHint). */
+
+@property --hold-progress {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.hold-ring {
+  position: fixed;
+  z-index: 20;
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  margin-top: -28px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(15, 17, 21, 0.55);
+}
+
+.hold-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 4px;
+  box-sizing: border-box;
+  background: conic-gradient(#ffd166 var(--hold-progress, 0%), transparent 0);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  /* Animated here (not on .hold-ring) because --hold-progress has
+     `inherits: false` — the keyframe must run on the element that reads it. */
+  animation: hold-ring-progress var(--hold-ms, 450ms) linear forwards;
+}
+
+@keyframes hold-ring-progress {
+  from {
+    --hold-progress: 0%;
+  }
+  to {
+    --hold-progress: 100%;
+  }
+}
+
+.miss-hint {
+  position: fixed;
+  left: 50%;
+  bottom: max(24px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(15, 17, 21, 0.85);
+  color: #eee;
+  font-size: 14px;
+  pointer-events: none;
+  animation: miss-hint-fade 1.5s ease forwards;
+}
+
+@keyframes miss-hint-fade {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

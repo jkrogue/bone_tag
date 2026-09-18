@@ -1,0 +1,68 @@
+.round-result-overlay {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.round-result-card {
+  pointer-events: auto;
+  width: min(560px, 100%);
+  padding: 20px max(20px, env(safe-area-inset-left)) max(20px, env(safe-area-inset-bottom))
+    max(20px, env(safe-area-inset-right));
+  background: rgba(15, 17, 21, 0.92);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #eee;
+  font-family: system-ui;
+}
+
+.round-result-heading {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.round-result-line {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: #d8d8dc;
+}
+
+.round-result-line strong {
+  color: #fff;
+}
+
+.round-result-points {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.round-result-total {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #a5a5ad;
+  line-height: 1.5;
+}
+
+.round-result-button {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  background: #4ade80;
+  color: #0f1115;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.round-result-button:active {
+  background: #3fc873;
+}
