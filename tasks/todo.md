@@ -25,4 +25,4 @@ Plan: ~/.claude/plans/implement-bone-tag-harmonic-quilt.md
 - Open judgment calls for the user: adjacent ribs linked as graph neighbours; easy pool includes C1/C2/C7/T1/T12/L1/L5.
 - Nothing committed yet (git initialised, no commits).
 - [x] 17. Enable panning (two-finger / right-drag) with target clamp; update how-to text
-- [ ] 18. Replay today + Practice modes (non-persistent) from Summary
+- [x] 18. Replay today + Practice modes (non-persistent) from Summary

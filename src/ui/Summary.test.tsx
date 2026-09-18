@@ -3,6 +3,7 @@ import '@testing-library/jest-dom/vitest'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useGameStore } from '../game/state'
+import type { GameMode } from '../game/state'
 import { UNREACHABLE_HOPS, roundPoints } from '../game/scoring'
 import type { RoundResult } from '../data/types'
 import { Summary } from './Summary'
@@ -10,13 +11,14 @@ import { Summary } from './Summary'
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 const BONE_IDS = ['frontal', 'occipital', 'mandible', 'hyoid', 'vomer']
 const MULTIPLIERS: (1 | 3)[] = [1, 1, 1, 3, 3]
 const HOPS = [0, 1, 2, 0, UNREACHABLE_HOPS]
 
-function seedSummary(): RoundResult[] {
+function seedSummary(overrides?: { mode?: GameMode }): RoundResult[] {
   const results: RoundResult[] = BONE_IDS.map((boneId, i) => ({
     boneId,
     markerPoint: [0, 0, 0],
@@ -39,6 +41,8 @@ function seedSummary(): RoundResult[] {
     assetsReady: true,
     newDayAvailable: false,
     missHintAt: null,
+    mode: overrides?.mode ?? 'daily',
+    dailySnapshot: { boneIds: BONE_IDS, multipliers: MULTIPLIERS, results },
   })
 
   return results
@@ -76,5 +80,28 @@ describe('Summary', () => {
     await vi.waitFor(() => expect(writeText).toHaveBeenCalled())
     const [text] = writeText.mock.calls[0] as [string];
     expect(text.startsWith('🦴 Bone Tag #')).toBe(true)
+  })
+
+  it('clicking "Replay today" from daily mode calls startReplay', () => {
+    const startReplaySpy = vi.spyOn(useGameStore.getState(), 'startReplay')
+
+    render(<Summary />)
+    fireEvent.click(screen.getByRole('button', { name: 'Replay today' }))
+
+    expect(startReplaySpy).toHaveBeenCalledTimes(1)
+  })
+
+  describe('practice mode', () => {
+    beforeEach(() => {
+      seedSummary({ mode: 'practice' })
+    })
+
+    it('renders no stats line, no Share button, and a "Back to today\'s result" button', () => {
+      render(<Summary />)
+
+      expect(screen.queryByText(/Played \d+ · Streak/)).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Share' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: "Back to today's result" })).toBeInTheDocument()
+    })
   })
 })

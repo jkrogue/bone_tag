@@ -153,6 +153,18 @@
   padding-top: 4px;
 }
 
+.bt-mode-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--bt-bg);
+  background: var(--bt-accent);
+  border-radius: 999px;
+  padding: 2px 6px;
+  vertical-align: middle;
+}
+
 .bt-pips {
   display: flex;
   gap: 8px;
@@ -396,6 +408,19 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+}
+
+.bt-summary__secondary-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.bt-btn--secondary {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--bt-text);
+  border: 1px solid var(--bt-border);
 }
 
 .bt-summary__share-status {

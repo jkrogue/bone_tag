@@ -15,6 +15,8 @@ interface DebugBone {
 
 interface DebugGameState {
   phase: string
+  mode: string
+  boneIds: string[]
   roundIndex: number
   results: unknown[]
   missHintAt: number | null
@@ -65,6 +67,14 @@ async function getPhase(page: Page): Promise<string> {
 
 async function getRoundIndex(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as BoneTagDebugWindow).__boneTag!.getState().roundIndex)
+}
+
+async function getMode(page: Page): Promise<string> {
+  return page.evaluate(() => (window as unknown as BoneTagDebugWindow).__boneTag!.getState().mode)
+}
+
+async function getBoneIds(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as unknown as BoneTagDebugWindow).__boneTag!.getState().boneIds)
 }
 
 async function getResultsLength(page: Page): Promise<number> {
@@ -236,6 +246,34 @@ test.describe('Bone Tag smoke', () => {
     await page.waitForFunction(() => !!(window as unknown as { __boneTag?: unknown }).__boneTag)
     await expect.poll(() => getPhase(page), { timeout: 30_000 }).toBe('summary')
     await expect(page.locator('.bt-summary-card')).toBeVisible()
+
+    // Replay today: same boneIds as the daily puzzle, played without touching the daily record.
+    const dailyBoneIds = await getBoneIds(page)
+    const dailyTotalText = (await page.locator('.bt-summary__total').textContent()) ?? ''
+
+    await page.getByRole('button', { name: 'Replay today' }).click()
+    await expect.poll(() => getPhase(page)).toBe('playing')
+    await expect(page.locator('[data-testid="mode-badge"]')).toHaveText('REPLAY')
+    expect(await getBoneIds(page)).toEqual(dailyBoneIds)
+
+    await playRound(page, 0)
+    await expect.poll(() => getPhase(page)).toBe('playing')
+
+    // Reload mid-replay: replay/practice never persists, so this must fall straight back
+    // to the (untouched) daily summary, not resume the replay.
+    await page.reload()
+    await page.waitForFunction(() => !!(window as unknown as { __boneTag?: unknown }).__boneTag)
+    await expect.poll(() => getPhase(page), { timeout: 30_000 }).toBe('summary')
+    expect(await getMode(page)).toBe('daily')
+    await expect(page.locator('[data-testid="mode-badge"]')).toHaveCount(0)
+    const totalTextAfterReload = (await page.locator('.bt-summary__total').textContent()) ?? ''
+    expect(totalTextAfterReload).toBe(dailyTotalText)
+
+    // Practice: a fresh, non-daily bone selection.
+    await page.getByRole('button', { name: 'Practice' }).click()
+    await expect.poll(() => getPhase(page)).toBe('playing')
+    await expect(page.locator('[data-testid="mode-badge"]')).toHaveText('PRACTICE')
+    expect(await getBoneIds(page)).not.toEqual(dailyBoneIds)
 
     expect(errors, `unexpected console/page errors: ${JSON.stringify(errors)}`).toEqual([])
   })

@@ -13,6 +13,7 @@ type PipState = 'done' | 'current' | 'todo'
  */
 export function Hud() {
   const phase = useGameStore((s) => s.phase)
+  const mode = useGameStore((s) => s.mode)
   const dayNumber = useGameStore((s) => s.dayNumber)
   const boneIds = useGameStore((s) => s.boneIds)
   const multipliers = useGameStore((s) => s.multipliers)
@@ -42,7 +43,14 @@ export function Hud() {
     <>
       <div className="bt-overlay bt-hud">
         <div className="bt-hud__bar">
-          <div className="bt-hud__day">Bone Tag #{dayNumber}</div>
+          <div className="bt-hud__day">
+            Bone Tag #{dayNumber}
+            {mode !== 'daily' && (
+              <span className="bt-mode-badge" data-testid="mode-badge">
+                {mode === 'practice' ? 'PRACTICE' : 'REPLAY'}
+              </span>
+            )}
+          </div>
 
           <div className="bt-pips">
             {boneIds.map((id, i) => {

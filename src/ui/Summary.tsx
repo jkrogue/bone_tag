@@ -23,6 +23,7 @@ function hopsLabel(hops: number): string {
 /** End-of-day summary: score, share tiles, per-round breakdown, and stats. */
 export function Summary() {
   const phase = useGameStore((s) => s.phase)
+  const mode = useGameStore((s) => s.mode)
   const dayNumber = useGameStore((s) => s.dayNumber)
   const boneIds = useGameStore((s) => s.boneIds)
   const multipliers = useGameStore((s) => s.multipliers)
@@ -30,15 +31,22 @@ export function Summary() {
   const stats = useGameStore((s) => s.stats)
   const total = useGameStore((s) => s.total())
   const max = useGameStore((s) => s.max())
+  const startReplay = useGameStore((s) => s.startReplay)
+  const startPractice = useGameStore((s) => s.startPractice)
+  const backToDaily = useGameStore((s) => s.backToDaily)
 
   const [shareStatus, setShareStatus] = useState<ShareStatus>(null)
   const [showAbout, setShowAbout] = useState(false)
 
   if (phase !== 'summary') return null
 
+  const isDaily = mode === 'daily'
+
   const tiles = results.map((r) => tileForHops(r.hops))
   const easyTiles = tiles.slice(0, 3).join('')
   const hardTiles = tiles.slice(3, 5).join('')
+
+  const title = isDaily ? `Bone Tag #${dayNumber}` : mode === 'practice' ? 'Practice' : `Replay of #${dayNumber}`
 
   const handleShare = async () => {
     const text = buildShareText({ dayNumber, results, multipliers, total, max })
@@ -47,11 +55,16 @@ export function Summary() {
     setTimeout(() => setShareStatus(null), 2500)
   }
 
+  const handlePlayAgain = () => {
+    if (mode === 'practice') startPractice()
+    else startReplay()
+  }
+
   return (
     <>
       <div className="bt-overlay bt-summary-wrap">
         <div className="bt-summary-card">
-          <h1 className="bt-summary__title">Bone Tag #{dayNumber}</h1>
+          <h1 className="bt-summary__title">{title}</h1>
           <div className="bt-summary__total">
             {total} / {max}
           </div>
@@ -90,21 +103,57 @@ export function Summary() {
             </tbody>
           </table>
 
-          <div className="bt-summary__stats">
-            Played {stats.played} · Streak {stats.currentStreak} · Best {stats.maxStreak}
-          </div>
+          {isDaily && (
+            <div className="bt-summary__stats">
+              Played {stats.played} · Streak {stats.currentStreak} · Best {stats.maxStreak}
+            </div>
+          )}
 
           <div className="bt-summary__actions">
-            <button type="button" className="bt-btn bt-btn--primary" onClick={handleShare}>
-              Share
-            </button>
-            {shareStatus && <span className="bt-summary__share-status">{SHARE_STATUS_LABEL[shareStatus]}</span>}
+            {isDaily ? (
+              <>
+                <button type="button" className="bt-btn bt-btn--primary" onClick={handleShare}>
+                  Share
+                </button>
+                {shareStatus && (
+                  <span className="bt-summary__share-status">{SHARE_STATUS_LABEL[shareStatus]}</span>
+                )}
+                <div className="bt-summary__secondary-actions">
+                  <button type="button" className="bt-btn bt-btn--secondary" onClick={() => startReplay()}>
+                    Replay today
+                  </button>
+                  <button type="button" className="bt-btn bt-btn--secondary" onClick={() => startPractice()}>
+                    Practice
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <button type="button" className="bt-btn bt-btn--primary" onClick={handlePlayAgain}>
+                  Play again
+                </button>
+                <div className="bt-summary__secondary-actions">
+                  {mode === 'replay' ? (
+                    <button type="button" className="bt-btn bt-btn--secondary" onClick={() => startPractice()}>
+                      Practice
+                    </button>
+                  ) : (
+                    <button type="button" className="bt-btn bt-btn--secondary" onClick={() => startReplay()}>
+                      Replay today
+                    </button>
+                  )}
+                  <button type="button" className="bt-btn bt-btn--secondary" onClick={() => backToDaily()}>
+                    Back to today's result
+                  </button>
+                </div>
+              </>
+            )}
             <button type="button" className="bt-link" onClick={() => setShowAbout(true)}>
               About
             </button>
           </div>
 
-          <div className="bt-summary__footer">Come back tomorrow for 5 new bones.</div>
+          {isDaily && <div className="bt-summary__footer">Come back tomorrow for 5 new bones.</div>}
         </div>
       </div>
 
